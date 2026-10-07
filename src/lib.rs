@@ -1,116 +1,79 @@
+use std::{cell::RefCell, rc::Rc};
+
+use crate::{
+    board::Board,
+    universe::{Cell, Universe},
+};
 use wasm_bindgen::prelude::*;
+use web_sys::{HtmlCanvasElement, console, window};
 
-#[wasm_bindgen]
-#[repr(u8)]
-#[derive(Clone, PartialEq, Eq)]
-pub enum Cell {
-    Dead,
-    Dying,
-    Alive,
+extern crate console_error_panic_hook;
+
+mod board;
+mod universe;
+
+const UNIVERSE_SIZE: [u32; 2] = [64, 64];
+const CELL_SIZE: u32 = 12;
+const GRID_THICKNESS: u32 = 1;
+
+const fn cell_color(cell: Option<Cell>) -> [u8; 4] {
+    match cell {
+        None => [211, 211, 211, 255],
+        Some(Cell::Alive) => [0, 0, 0, 255],
+        Some(Cell::Dying) => [255, 0, 0, 255],
+        Some(Cell::Dead) => [255, 255, 255, 255],
+    }
 }
 
-impl Cell {
-    fn new_random(p_alive: f64) -> Self {
-        if rand::random_bool(p_alive) {
-            Self::Alive
-        } else {
-            Self::Dead
+#[wasm_bindgen(start)]
+/// # Panics
+/// May panic if anything goes wrong with the DOM
+pub fn main() {
+    console_error_panic_hook::set_once();
+
+    let mut universe = Universe::new(UNIVERSE_SIZE, 0.5);
+    let mut board = get_element_by_id::<HtmlCanvasElement>("canvas")
+        .and_then(|canvas| {
+            Board::new(
+                UNIVERSE_SIZE,
+                CELL_SIZE,
+                GRID_THICKNESS,
+                cell_color,
+                &canvas,
+            )
+        })
+        .expect("Unable to initialize canvas");
+
+    render_loop(
+        move || {
+            board
+                .update(&universe)
+                .map(|()| universe.tick())
+                .map_err(|e| console::error_1(&e))
+                .is_ok()
+        },
+        16,
+    );
+}
+
+fn get_element_by_id<T: JsCast>(id: &str) -> Option<T> {
+    window()?.document()?.get_element_by_id(id)?.dyn_into().ok()
+}
+
+/// Callback: return true to keep going, false to stop
+fn render_loop(mut cb: impl FnMut() -> bool + 'static, delay: i32) {
+    let f = Rc::new(RefCell::new(None));
+    let g = f.clone();
+    *g.borrow_mut() = Some(Closure::new(move || {
+        if cb() {
+            set_timeout(f.borrow().as_ref().unwrap(), delay);
         }
-    }
-
-    fn toggle(&mut self) {
-        *self = match self {
-            Self::Dead => Self::Alive,
-            Self::Dying => Self::Dead,
-            Self::Alive => Self::Dying,
-        };
-    }
+    }));
+    set_timeout(g.borrow().as_ref().unwrap(), delay);
 }
 
-#[wasm_bindgen]
-pub struct Board {
-    cells: Vec<Cell>,
-    buffer: Vec<Cell>,
-    width: usize,
-    height: usize,
+fn set_timeout(cb: &Closure<dyn FnMut()>, timeout: i32) -> Option<i32> {
+    window()?
+        .set_timeout_with_callback_and_timeout_and_arguments_0(cb.as_ref().unchecked_ref(), timeout)
+        .ok()
 }
-
-#[wasm_bindgen]
-impl Board {
-    pub fn new_random(p_alive: f64) -> Self {
-        let (width, height) = (64, 64);
-        let cells = (0..width * height)
-            .map(|_| Cell::new_random(p_alive))
-            .collect::<Vec<_>>();
-        let buffer = cells.clone();
-        Self {
-            cells,
-            buffer,
-            width,
-            height,
-        }
-    }
-
-    pub fn width(&self) -> usize {
-        self.width
-    }
-
-    pub fn height(&self) -> usize {
-        self.height
-    }
-
-    pub fn cells(&self) -> *const Cell {
-        self.cells.as_ptr()
-    }
-
-    pub fn toggle_cell(&mut self, row: usize, col: usize) {
-        let i = self.get_index(row, col);
-        self.cells[i].toggle();
-    }
-
-    pub fn tick(&mut self) {
-        for row in 0..self.height {
-            for col in 0..self.width {
-                let i = self.get_index(row, col);
-                self.buffer[i] = match self.cells[i] {
-                    Cell::Alive => Cell::Dying,
-                    Cell::Dying => Cell::Dead,
-                    Cell::Dead => match self.count_live_neighbors(row, col) {
-                        2 => Cell::Alive,
-                        _ => Cell::Dead,
-                    },
-                };
-            }
-        }
-        std::mem::swap(&mut self.cells, &mut self.buffer);
-    }
-
-    fn count_live_neighbors(&self, row: usize, col: usize) -> usize {
-        NEIGHBOR_OFFSETS
-            .iter()
-            .filter(|[i, j]| {
-                let n_row = row.wrapping_add_signed(*i);
-                let n_col = col.wrapping_add_signed(*j);
-                let i = self.get_index(n_row, n_col);
-                self.cells[i] == Cell::Alive
-            })
-            .count()
-    }
-
-    fn get_index(&self, row: usize, col: usize) -> usize {
-        let row = row % self.height;
-        let col = col % self.width;
-        row * self.width + col
-    }
-}
-
-static NEIGHBOR_OFFSETS: [[isize; 2]; 8] = [
-    [-1, -1],
-    [-1, 0],
-    [-1, 1],
-    [0, -1],
-    [0, 1],
-    [1, -1],
-    [1, 0],
-    [1, 1],
-];
