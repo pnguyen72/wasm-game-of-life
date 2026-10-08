@@ -18,12 +18,17 @@ impl Input {
         get_element_by_id(element_id).map(Self)
     }
 
-    pub fn on_change(&self, cb: impl FnMut(Event) + 'static) {
-        let cb = Closure::new(cb);
-        if let Err(e) = self.add_event_listener_with_callback("input", cb.as_ref().unchecked_ref())
+    pub fn on_change(&self, mut callback: impl FnMut(HtmlInputElement) + 'static) {
+        let handler = Closure::new(move |e: Event| {
+            if let Some(input) = e.target().and_then(|e| e.dyn_into().ok()) {
+                callback(input);
+            }
+        });
+        if let Err(e) =
+            self.add_event_listener_with_callback("input", handler.as_ref().unchecked_ref())
         {
             console::error_1(&e);
         }
-        cb.forget();
+        handler.forget();
     }
 }

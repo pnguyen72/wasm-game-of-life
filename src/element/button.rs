@@ -18,12 +18,17 @@ impl Button {
         get_element_by_id(element_id).map(Self)
     }
 
-    pub fn on_click(&self, cb: impl FnMut(Event) + 'static) {
-        let cb = Closure::new(cb);
-        if let Err(e) = self.add_event_listener_with_callback("click", cb.as_ref().unchecked_ref())
+    pub fn on_click(&self, mut callback: impl FnMut(HtmlButtonElement) + 'static) {
+        let handler = Closure::new(move |e: Event| {
+            if let Some(button) = e.target().and_then(|e| e.dyn_into().ok()) {
+                callback(button);
+            }
+        });
+        if let Err(e) =
+            self.add_event_listener_with_callback("click", handler.as_ref().unchecked_ref())
         {
             console::error_1(&e);
         }
-        cb.forget();
+        handler.forget();
     }
 }

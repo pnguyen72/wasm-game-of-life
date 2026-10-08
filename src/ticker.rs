@@ -1,34 +1,53 @@
-use js_sys::Function;
-use std::{cell::Cell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 use wasm_bindgen::prelude::*;
 use web_sys::{console, window};
 
 pub struct Ticker {
-    tick: Closure<dyn FnMut()>,
-    delay: Rc<Cell<i32>>,
-    timer_id: Rc<Cell<Option<i32>>>,
-    running: Cell<bool>,
+    start: Box<dyn Fn()>,
+    step: Rc<RefCell<dyn FnMut() -> Result<(), JsValue>>>,
+    running: Rc<Cell<bool>>,
 }
 
 impl Ticker {
-    pub fn new(mut f: impl FnMut() -> Result<(), JsValue> + 'static, delay: Rc<Cell<i32>>) -> Self {
-        let timer_id = Rc::new(Cell::new(None));
-        let running = Cell::new(false);
-        let tick = Closure::new({
-            let timer_id = timer_id.clone();
+    // callback returns bool indicating whether the loop should continue
+    pub fn new(
+        run_fn: impl FnMut() -> Result<(), JsValue> + 'static,
+        delay: Rc<Cell<i32>>,
+    ) -> Self {
+        let running = Rc::new(Cell::new(false));
+
+        let step = Rc::new(RefCell::new(run_fn));
+
+        let start = Box::new({
             let running = running.clone();
-            move || {
-                if let Err(e) = f() {
-                    console::error_1(&e);
-                    timer_id.take().and_then(clear_interval);
-                    running.set(false);
+            let step = step.clone();
+            let f = Rc::new(RefCell::new(None));
+            let g = f.clone();
+            *g.borrow_mut() = Some(Closure::new({
+                let delay = delay.clone();
+                move || {
+                    if running.get()
+                        && step.borrow_mut()()
+                            .map_err(|e| console::error_1(&e))
+                            .is_ok()
+                    {
+                        set_timeout(f.borrow().as_ref().unwrap(), delay.get());
+                    } else {
+                        running.set(false);
+                    }
                 }
+            }));
+            move || {
+                set_timeout(g.borrow().as_ref().unwrap(), delay.get());
             }
         });
+
         Self {
-            tick,
-            delay,
-            timer_id,
+            start,
+            step,
             running,
         }
     }
@@ -38,50 +57,33 @@ impl Ticker {
      * No-op if already running.
      */
     pub fn start(&self) {
-        if self.timer_id.get().is_some() {
-            return; // already running
-        }
-        match set_interval(&self.tick, self.delay.get()) {
-            None => console::error_1(&"setInterval failed".into()),
-            id => {
-                self.timer_id.set(id);
-                self.running.set(true);
-            }
+        if !self.is_running() {
+            self.running.set(true);
+            (self.start)();
         }
     }
 
     /** Run once. No-op if already running. */
     pub fn step(&self) {
-        if self.timer_id.get().is_some() {
-            return; // already running
-        }
-        let tick = self.tick.as_ref().unchecked_ref::<Function>();
-        if let Err(e) = tick.call0(&JsValue::NULL) {
+        if !self.is_running()
+            && let Err(e) = self.step.borrow_mut()()
+        {
             console::error_1(&e);
         }
     }
 
     /** Stop the loop. No-op if not running. */
     pub fn stop(&self) {
-        if self.timer_id.take().and_then(clear_interval).is_some() {
-            self.running.set(false);
-        }
+        self.running.set(false);
     }
 
-    pub const fn is_running(&self) -> bool {
+    pub fn is_running(&self) -> bool {
         self.running.get()
     }
 }
 
-fn set_interval(cb: &Closure<dyn FnMut()>, timeout: i32) -> Option<i32> {
+fn set_timeout(cb: &Closure<dyn FnMut()>, timeout: i32) -> Option<i32> {
     window()?
-        .set_interval_with_callback_and_timeout_and_arguments_0(
-            cb.as_ref().unchecked_ref(),
-            timeout,
-        )
+        .set_timeout_with_callback_and_timeout_and_arguments_0(cb.as_ref().unchecked_ref(), timeout)
         .ok()
-}
-
-fn clear_interval(handle: i32) -> Option<()> {
-    window().map(|w| w.clear_interval_with_handle(handle))
 }

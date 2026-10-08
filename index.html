@@ -6,10 +6,11 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 	</head>
 	<body>
-		<input id="p_alive" type="range" min="2" max="60" value="2" />
+		<input id="p_alive" type="range" min="2" max="50" />
 		<button id="play-pause" type="button">Play</button>
 		<button id="step" type="button">Step</button>
 		<canvas id="canvas"></canvas>
+		<input id="speed" type="range" min="-50" max="0" disabled />
 
 		<script type="module">
 			import init from "./pkg/lab4.js";
