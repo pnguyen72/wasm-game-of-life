@@ -1,25 +1,28 @@
-mod canvas;
+mod button;
+mod grid;
+mod ticker;
 mod universe;
-mod web_utils;
+mod utils;
 
-use crate::{canvas::Canvas, universe::Universe, web_utils::get_element_by_id};
-use std::{
-    cell::{Cell, RefCell},
-    rc::Rc,
+use crate::{
+    button::Button,
+    grid::Grid,
+    ticker::Ticker,
+    universe::{Cell, Universe},
 };
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
-use web_sys::{Event, HtmlButtonElement, console, window};
 
 const UNIVERSE_SIZE: [u32; 2] = [64, 64];
 const CELL_SIZE: u32 = 11;
-const GRID_THICKNESS: u32 = 1;
+const LINE_THICKNESS: u32 = 1;
 
-const fn cell_color(cell: Option<universe::Cell>) -> [u8; 4] {
+const fn cell_color(cell: Option<Cell>) -> [u8; 4] {
     match cell {
         None => [211, 211, 211, 255],
-        Some(universe::Cell::Alive) => [0, 0, 0, 255],
-        Some(universe::Cell::Dying) => [255, 0, 0, 255],
-        Some(universe::Cell::Dead) => [255, 255, 255, 255],
+        Some(Cell::Alive) => [0, 0, 0, 255],
+        Some(Cell::Dying) => [255, 0, 0, 255],
+        Some(Cell::Dead) => [255, 255, 255, 255],
     }
 }
 
@@ -29,68 +32,35 @@ const fn cell_color(cell: Option<universe::Cell>) -> [u8; 4] {
 pub fn main() {
     console_error_panic_hook::set_once();
 
-    let mut universe = Universe::new(UNIVERSE_SIZE, 0.1);
-    let mut canvas = Canvas::new("canvas", &universe, CELL_SIZE, GRID_THICKNESS, cell_color)
-        .expect("Unable to initialize canvas");
+    let mut universe = Universe::new(UNIVERSE_SIZE, 0.02);
+    let mut grid = Grid::new("canvas", &universe, CELL_SIZE, LINE_THICKNESS, cell_color).unwrap();
 
-    let play_btn =
-        Rc::new(get_element_by_id::<HtmlButtonElement>("play-pause").expect("play button"));
-    let running = Rc::new(Cell::new(false));
-    let run = {
-        let running = running.clone();
-        create_interval(
-            move || {
-                let is_running = running.get();
-                is_running
-                    && canvas
-                        .update(&universe)
-                        .map(|()| universe.tick())
-                        .map_err(|e| console::error_1(&e))
-                        .is_ok()
-            },
-            20, // TODO: dynamically update this
-        )
-    };
-    {
-        let run = run.clone();
-        let closure = {
-            let play_button = play_btn.clone();
-            Closure::<dyn FnMut(_)>::new(move |_: Event| {
-                let is_running = running.get();
-                running.set(!is_running);
-                if is_running {
-                    play_button.set_text_content(Some("Play"));
-                } else {
-                    run();
-                    play_button.set_text_content(Some("Pause"));
-                }
-            })
-        };
-        play_btn
-            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
-            .unwrap();
-        closure.forget();
-    }
-    // run();
-}
+    let ticker = Rc::new(Ticker::new(
+        move || {
+            universe.tick();
+            grid.update(&universe)
+        },
+        Rc::new(20.into()),
+    ));
 
-// https://wasm-bindgen.github.io/wasm-bindgen/examples/request-animation-frame.html
-fn create_interval(mut cb: impl FnMut() -> bool + 'static, delay: i32) -> Rc<impl Fn()> {
-    let f = Rc::new(RefCell::new(None));
-    let g = f.clone();
-    *g.borrow_mut() = Some(Closure::new(move || {
-        // callback returns boolean for whether to continue the loop
-        if cb() {
-            set_timeout(f.borrow().as_ref().unwrap(), delay);
+    let step_btn = Rc::new(Button::get("step").unwrap());
+    let play_btn = Button::get("play-pause").unwrap();
+    step_btn.on_click({
+        let ticker = ticker.clone();
+        move |_| ticker.step()
+    });
+    play_btn.on_click({
+        let play_btn = play_btn.clone();
+        move |_| {
+            if ticker.is_running() {
+                play_btn.set_text_content("Play".into());
+                step_btn.set_disabled(false);
+                ticker.stop();
+            } else {
+                play_btn.set_text_content("Pause".into());
+                step_btn.set_disabled(true);
+                ticker.start();
+            }
         }
-    }));
-    Rc::new(move || {
-        set_timeout(g.borrow().as_ref().unwrap(), delay);
-    })
-}
-
-fn set_timeout(cb: &Closure<dyn FnMut()>, timeout: i32) -> Option<i32> {
-    window()?
-        .set_timeout_with_callback_and_timeout_and_arguments_0(cb.as_ref().unchecked_ref(), timeout)
-        .ok()
+    });
 }
