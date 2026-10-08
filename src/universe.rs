@@ -1,11 +1,11 @@
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Cell {
+pub enum LifeState {
     Dead,
     Dying,
     Alive,
 }
 
-impl Cell {
+impl LifeState {
     fn new(p_alive: f64) -> Self {
         if rand::random_bool(p_alive) {
             Self::Alive
@@ -22,14 +22,14 @@ impl Cell {
 pub struct Universe {
     pub width: u32,
     pub height: u32,
-    cells: Vec<Cell>,
-    buffer: Vec<Cell>,
+    cells: Vec<LifeState>,
+    buffer: Vec<LifeState>,
 }
 
 impl Universe {
     pub fn new([width, height]: [u32; 2], p_alive: f64) -> Self {
         let cells = (0..width * height)
-            .map(|_| Cell::new(p_alive))
+            .map(|_| LifeState::new(p_alive))
             .collect::<Vec<_>>();
         let buffer = cells.clone();
         Self {
@@ -42,9 +42,10 @@ impl Universe {
 
     pub fn randomize(&mut self, p_alive: f64) {
         self.cells.iter_mut().for_each(|c| c.randomize(p_alive));
+        self.buffer = self.cells.clone();
     }
 
-    pub fn get_cell(&self, row: u32, col: u32) -> Cell {
+    pub fn get_cell(&self, row: u32, col: u32) -> LifeState {
         self.cells[self.get_index(row, col)]
     }
 
@@ -53,16 +54,20 @@ impl Universe {
             for col in 0..self.width {
                 let i = self.get_index(row, col);
                 self.buffer[i] = match self.cells[i] {
-                    Cell::Alive => Cell::Dying,
-                    Cell::Dying => Cell::Dead,
-                    Cell::Dead => match self.count_live_neighbors(row, col) {
-                        2 => Cell::Alive,
-                        _ => Cell::Dead,
+                    LifeState::Alive => LifeState::Dying,
+                    LifeState::Dying => LifeState::Dead,
+                    LifeState::Dead => match self.count_live_neighbors(row, col) {
+                        2 => LifeState::Alive,
+                        _ => LifeState::Dead,
                     },
                 };
             }
         }
         std::mem::swap(&mut self.cells, &mut self.buffer);
+    }
+
+    pub fn is_alive(&self) -> bool {
+        self.cells.iter().any(|c| *c != LifeState::Dead)
     }
 
     fn count_live_neighbors(&self, row: u32, col: u32) -> usize {
@@ -72,7 +77,7 @@ impl Universe {
                 let n_row = row.wrapping_add_signed(*i);
                 let n_col = col.wrapping_add_signed(*j);
                 let i = self.get_index(n_row, n_col);
-                self.cells[i] == Cell::Alive
+                self.cells[i] == LifeState::Alive
             })
             .count()
     }

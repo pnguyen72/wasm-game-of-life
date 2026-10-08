@@ -1,83 +1,63 @@
+use std::rc::Weak;
 use std::{
     cell::{Cell, RefCell},
     rc::Rc,
 };
 use wasm_bindgen::prelude::*;
-use web_sys::{console, window};
+use web_sys::window;
 
 pub struct Ticker {
-    start: Box<dyn Fn()>,
-    step: Rc<RefCell<dyn FnMut() -> Result<(), JsValue>>>,
-    running: Rc<Cell<bool>>,
+    tick: RefCell<Box<dyn FnMut() -> bool>>,
+    delay: Cell<i32>,
+    running: Cell<bool>,
+    timer: Closure<dyn FnMut()>,
 }
 
 impl Ticker {
-    // callback returns bool indicating whether the loop should continue
-    pub fn new(
-        run_fn: impl FnMut() -> Result<(), JsValue> + 'static,
-        delay: Rc<Cell<i32>>,
-    ) -> Self {
-        let running = Rc::new(Cell::new(false));
-
-        let step = Rc::new(RefCell::new(run_fn));
-
-        let start = Box::new({
-            let running = running.clone();
-            let step = step.clone();
-            let f = Rc::new(RefCell::new(None));
-            let g = f.clone();
-            *g.borrow_mut() = Some(Closure::new({
-                let delay = delay.clone();
+    pub fn new(tick: impl FnMut() -> bool + 'static, delay: i32) -> Rc<Self> {
+        Rc::new_cyclic(|weak: &Weak<Self>| Self {
+            tick: RefCell::new(Box::new(tick)),
+            delay: Cell::new(delay),
+            running: Cell::new(false),
+            timer: Closure::new({
+                let weak = weak.clone();
                 move || {
-                    if running.get()
-                        && step.borrow_mut()()
-                            .map_err(|e| console::error_1(&e))
-                            .is_ok()
-                    {
-                        set_timeout(f.borrow().as_ref().unwrap(), delay.get());
-                    } else {
-                        running.set(false);
+                    if let Some(ticker) = weak.upgrade().filter(|t| t.is_running()) {
+                        let mut tick = ticker.tick.borrow_mut();
+                        if !tick() {
+                            ticker.stop();
+                        } else if ticker.running.get() {
+                            set_timeout(&ticker.timer, ticker.delay.get());
+                        }
                     }
                 }
-            }));
-            move || {
-                set_timeout(g.borrow().as_ref().unwrap(), delay.get());
-            }
-        });
-
-        Self {
-            start,
-            step,
-            running,
-        }
+            }),
+        })
     }
 
-    /**
-     * Run repeatedly until `stop` is called, or the tick function returns an error.
-     * No-op if already running.
-     */
     pub fn start(&self) {
-        if !self.is_running() {
+        if !self.running.get() {
             self.running.set(true);
-            (self.start)();
+            set_timeout(&self.timer, self.delay.get());
         }
     }
 
-    /** Run once. No-op if already running. */
     pub fn step(&self) {
-        if !self.is_running()
-            && let Err(e) = self.step.borrow_mut()()
-        {
-            console::error_1(&e);
+        if !self.running.get() {
+            let mut tick = self.tick.borrow_mut();
+            tick();
         }
     }
 
-    /** Stop the loop. No-op if not running. */
     pub fn stop(&self) {
         self.running.set(false);
     }
 
-    pub fn is_running(&self) -> bool {
+    pub fn set_delay(&self, delay: i32) {
+        self.delay.set(delay);
+    }
+
+    pub const fn is_running(&self) -> bool {
         self.running.get()
     }
 }

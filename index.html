@@ -3,14 +3,24 @@
 	<head>
 		<meta charset="utf-8" />
 		<title>Modified game of life</title>
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<style>
+			body {
+				background-color: rgb(31, 29, 46);
+				button:not(:disabled) {
+					cursor: pointer;
+				}
+				input:not(:disabled) {
+					cursor: grab;
+				}
+			}
+		</style>
 	</head>
 	<body>
-		<input id="p_alive" type="range" min="2" max="50" />
+		<input id="p_alive" type="range" min="2" max="60" />
 		<button id="play-pause" type="button">Play</button>
 		<button id="step" type="button">Step</button>
 		<canvas id="canvas"></canvas>
-		<input id="speed" type="range" min="-50" max="0" disabled />
+		<input id="speed" type="range" min="-40" max="0" disabled />
 
 		<script type="module">
 			import init from "./pkg/lab4.js";
