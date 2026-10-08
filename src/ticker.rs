@@ -3,8 +3,6 @@ use std::{cell::Cell, rc::Rc};
 use wasm_bindgen::prelude::*;
 use web_sys::{console, window};
 
-use crate::utils::{clear_interval, set_interval};
-
 pub struct Ticker {
     tick: Closure<dyn FnMut()>,
     delay: Rc<Cell<i32>>,
@@ -14,26 +12,19 @@ pub struct Ticker {
 
 impl Ticker {
     pub fn new(mut f: impl FnMut() -> Result<(), JsValue> + 'static, delay: Rc<Cell<i32>>) -> Self {
-        let timer_id: Rc<Cell<Option<i32>>> = Rc::new(Cell::new(None));
-
-        let stop = {
+        let timer_id = Rc::new(Cell::new(None));
+        let running = Cell::new(false);
+        let tick = Closure::new({
             let timer_id = timer_id.clone();
+            let running = running.clone();
             move || {
-                if let (Some(w), Some(id)) = (window(), timer_id.take()) {
-                    w.clear_interval_with_handle(id);
+                if let Err(e) = f() {
+                    console::error_1(&e);
+                    timer_id.take().and_then(clear_interval);
+                    running.set(false);
                 }
             }
-        };
-
-        let tick = Closure::<dyn FnMut()>::new(move || {
-            if let Err(e) = f() {
-                console::error_1(&e);
-                stop();
-            }
         });
-
-        let running = Cell::new(false);
-
         Self {
             tick,
             delay,
@@ -80,4 +71,17 @@ impl Ticker {
     pub const fn is_running(&self) -> bool {
         self.running.get()
     }
+}
+
+fn set_interval(cb: &Closure<dyn FnMut()>, timeout: i32) -> Option<i32> {
+    window()?
+        .set_interval_with_callback_and_timeout_and_arguments_0(
+            cb.as_ref().unchecked_ref(),
+            timeout,
+        )
+        .ok()
+}
+
+fn clear_interval(handle: i32) -> Option<()> {
+    window().map(|w| w.clear_interval_with_handle(handle))
 }

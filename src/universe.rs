@@ -13,6 +13,10 @@ impl Cell {
             Self::Dead
         }
     }
+
+    pub fn randomize(&mut self, p_alive: f64) {
+        *self = Self::new(p_alive);
+    }
 }
 
 pub struct Universe {
@@ -34,6 +38,10 @@ impl Universe {
             cells,
             buffer,
         }
+    }
+
+    pub fn randomize(&mut self, p_alive: f64) {
+        self.cells.iter_mut().for_each(|c| c.randomize(p_alive));
     }
 
     pub fn get_cell(&self, row: u32, col: u32) -> Cell {

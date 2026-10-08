@@ -1,16 +1,15 @@
-mod button;
+mod element;
 mod grid;
 mod ticker;
 mod universe;
-mod utils;
 
 use crate::{
-    button::Button,
+    element::{button::Button, input::Input},
     grid::Grid,
     ticker::Ticker,
     universe::{Cell, Universe},
 };
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
 
 const UNIVERSE_SIZE: [u32; 2] = [64, 64];
@@ -32,25 +31,43 @@ const fn cell_color(cell: Option<Cell>) -> [u8; 4] {
 pub fn main() {
     console_error_panic_hook::set_once();
 
-    let mut universe = Universe::new(UNIVERSE_SIZE, 0.02);
-    let mut grid = Grid::new("canvas", &universe, CELL_SIZE, LINE_THICKNESS, cell_color).unwrap();
-
+    let p_alive_slider = Rc::new(Input::get("p_alive").unwrap());
+    let universe = Rc::new(RefCell::new(Universe::new(
+        UNIVERSE_SIZE,
+        p_alive_slider.value_as_number() / 100.,
+    )));
+    let mut grid = Grid::new(
+        "canvas",
+        &universe.borrow(),
+        CELL_SIZE,
+        LINE_THICKNESS,
+        cell_color,
+    )
+    .unwrap();
     let ticker = Rc::new(Ticker::new(
-        move || {
-            universe.tick();
-            grid.update(&universe)
+        {
+            let universe = universe.clone();
+            universe.borrow_mut().tick();
+            move || {
+                grid.update(&universe.borrow())?;
+                universe.borrow_mut().tick();
+                Ok(())
+            }
         },
         Rc::new(20.into()),
     ));
 
     let step_btn = Rc::new(Button::get("step").unwrap());
-    let play_btn = Button::get("play-pause").unwrap();
     step_btn.on_click({
         let ticker = ticker.clone();
         move |_| ticker.step()
     });
+
+    let play_btn = Rc::new(Button::get("play-pause").unwrap());
     play_btn.on_click({
+        let ticker = ticker.clone();
         let play_btn = play_btn.clone();
+        let step_btn = step_btn.clone();
         move |_| {
             if ticker.is_running() {
                 play_btn.set_text_content("Play".into());
@@ -61,6 +78,18 @@ pub fn main() {
                 step_btn.set_disabled(true);
                 ticker.start();
             }
+        }
+    });
+
+    p_alive_slider.on_change({
+        let p_alive_slider = p_alive_slider.clone();
+        move |_| {
+            let p_alive = p_alive_slider.value_as_number() / 100.;
+            ticker.stop();
+            universe.borrow_mut().randomize(p_alive);
+            ticker.step();
+            play_btn.set_text_content("Play".into());
+            step_btn.set_disabled(false);
         }
     });
 }

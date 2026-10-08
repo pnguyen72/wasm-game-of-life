@@ -1,8 +1,7 @@
+use crate::element::get_element_by_id;
 use std::ops::Deref;
 use wasm_bindgen::prelude::*;
 use web_sys::{Event, HtmlButtonElement, console};
-
-use crate::utils::get_element_by_id;
 
 pub struct Button(HtmlButtonElement);
 

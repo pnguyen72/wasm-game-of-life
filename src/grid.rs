@@ -3,7 +3,7 @@ use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
 use crate::{
     universe::{Cell, Universe},
-    utils::get_element_by_id,
+    element::get_element_by_id,
 };
 
 type ColorFn = fn(Option<Cell>) -> [u8; 4]; // none = grid lines
@@ -46,7 +46,6 @@ impl Grid {
             ctx,
             buffer,
         };
-
         grid.draw_grid_lines();
         grid.update(universe).ok().and(Some(grid))
     }
