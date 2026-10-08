@@ -1,29 +1,35 @@
 use wasm_bindgen::{Clamped, prelude::*};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
-use crate::universe::{Cell, Universe};
+use crate::{
+    universe::{Cell, Universe},
+    web_utils::get_element_by_id,
+};
 
-pub struct Board {
+type ColorFn = fn(Option<Cell>) -> [u8; 4]; // none = grid lines
+
+pub struct Canvas {
     width: u32,
     height: u32,
     cell_size: u32,
     grid_thickness: u32,
-    color: fn(Option<Cell>) -> [u8; 4], // none = grid lines
+    color: ColorFn,
     ctx: CanvasRenderingContext2d,
     buffer: Vec<u8>,
 }
 
-impl Board {
+impl Canvas {
     pub fn new(
-        [universe_width, universe_height]: [u32; 2],
+        element_id: &str,
+        universe: &Universe,
         cell_size: u32,
         grid_thickness: u32,
-        color: fn(Option<Cell>) -> [u8; 4],
-        canvas: &HtmlCanvasElement,
+        color: ColorFn,
     ) -> Option<Self> {
-        let width = cell_size * universe_width + grid_thickness * (universe_width + 1);
-        let height = cell_size * universe_height + grid_thickness * (universe_height + 1);
+        let width = cell_size * universe.width + grid_thickness * (universe.width + 1);
+        let height = cell_size * universe.height + grid_thickness * (universe.height + 1);
 
+        let canvas: HtmlCanvasElement = get_element_by_id(element_id)?;
         canvas.set_width(width);
         canvas.set_height(height);
 
@@ -45,8 +51,10 @@ impl Board {
             ctx,
             buffer,
         };
-        board.draw_grid(); // only need to draw once
-        Some(board)
+
+        board.draw_grid();
+        board.draw_universe(universe);
+        board.render().ok().and(Some(board))
     }
 
     pub fn update(&mut self, universe: &Universe) -> Result<(), JsValue> {
@@ -55,15 +63,14 @@ impl Board {
     }
 
     fn draw_universe(&mut self, universe: &Universe) {
+        let fill_size = [self.cell_size, self.cell_size];
+
         for row in 0..universe.height {
             for col in 0..universe.width {
                 let cell = universe.get_cell(row, col);
                 let cell_color = (self.color)(Some(cell));
-
                 let x = self.cell_size * col + self.grid_thickness * (col + 1);
                 let y = self.cell_size * row + self.grid_thickness * (row + 1);
-                let fill_size = [self.cell_size, self.cell_size];
-
                 self.fill_rect(cell_color, [x, y], fill_size);
             }
         }
@@ -83,9 +90,9 @@ impl Board {
     }
 
     fn fill_rect(&mut self, color: [u8; 4], [x, y]: [u32; 2], [w, h]: [u32; 2]) {
-        for y in y..(y + h) {
-            for x in x..(x + w) {
-                let idx = ((y * self.width + x) * 4) as usize;
+        for py in y..(y + h) {
+            for px in x..(x + w) {
+                let idx = ((py * self.width + px) * 4) as usize;
                 self.buffer[idx..idx + 4].copy_from_slice(&color);
             }
         }

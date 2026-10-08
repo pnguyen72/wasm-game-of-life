@@ -1,4 +1,3 @@
-#[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Cell {
     Dead,
