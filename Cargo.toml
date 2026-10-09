@@ -1,5 +1,5 @@
 [package]
-name = "lab4"
+name = "game-of-life"
 version = "0.1.0"
 edition = "2024"
 

@@ -6,7 +6,7 @@ use web_sys::window;
 use web_sys::{Event, EventTarget};
 
 #[derive(Clone)]
-pub struct Element<T: JsCast>(T);
+pub struct Element<T>(T);
 
 impl<T: JsCast> Deref for Element<T> {
     type Target = T;
@@ -16,18 +16,18 @@ impl<T: JsCast> Deref for Element<T> {
     }
 }
 
-impl<T: JsCast + AsRef<EventTarget> + Debug> Element<T> {
+impl<T: JsCast + AsRef<EventTarget>> Element<T> {
     pub fn get_by_id(id: &str) -> Option<Self> {
         let element = window()?
             .document()?
             .get_element_by_id(id)
-            .log_none(&format!("Element with id {id} not found"))?;
-        Self::from(element)
+            .js_expect(&format!("Element with id {id} not found"))?;
+        Self::try_from(element)
     }
 
     pub fn on(&self, event: &str, mut callback: impl FnMut(&Self) + 'static) {
         let handler = Closure::new(move |e: Event| {
-            if let Some(target) = e.target().and_then(Self::from) {
+            if let Some(target) = e.target().and_then(Self::try_from) {
                 callback(&target);
             }
         });
@@ -41,7 +41,7 @@ impl<T: JsCast + AsRef<EventTarget> + Debug> Element<T> {
         }
     }
 
-    fn from<E: JsCast + AsRef<EventTarget> + Debug>(e: E) -> Option<Self> {
+    fn try_from<E: JsCast + AsRef<EventTarget> + Debug>(e: E) -> Option<Self> {
         e.dyn_into().js_ok().map(Self)
     }
 }

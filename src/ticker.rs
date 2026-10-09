@@ -1,4 +1,4 @@
-use crate::error::JsResult;
+use crate::error::{JsOption, JsResult};
 use std::{
     cell::{Cell, RefCell},
     rc::{Rc, Weak},
@@ -10,7 +10,7 @@ pub struct Ticker {
     tick: RefCell<Box<dyn FnMut() -> bool>>,
     timer: Closure<dyn FnMut()>,
     delay: Cell<i32>,
-    timer_id: Rc<Cell<Option<i32>>>,
+    timer_id: Cell<Option<i32>>,
 }
 
 impl Ticker {
@@ -18,7 +18,7 @@ impl Ticker {
         Rc::new_cyclic(|weak: &Weak<Self>| Self {
             tick: RefCell::new(Box::new(tick)),
             delay: Cell::new(delay),
-            timer_id: Rc::new(Cell::new(None)),
+            timer_id: Cell::new(None),
             timer: Closure::new({
                 let weak = weak.clone();
                 move || {
@@ -35,7 +35,8 @@ impl Ticker {
 
     pub fn start(&self) {
         if !self.is_running() {
-            let timer_id = set_interval(&self.timer, self.delay.get());
+            let delay = self.delay.get();
+            let timer_id = set_interval(&self.timer, delay).js_expect("Failed to set interval");
             self.timer_id.set(timer_id);
         }
     }
@@ -45,10 +46,12 @@ impl Ticker {
     }
 
     pub fn stop(&self) {
-        self.timer_id.take().and_then(clear_interval);
+        if let Some(id) = self.timer_id.take() {
+            clear_interval(id).js_expect("Failed to clear interval");
+        }
     }
 
-    pub fn is_running(&self) -> bool {
+    pub const fn is_running(&self) -> bool {
         self.timer_id.get().is_some()
     }
 

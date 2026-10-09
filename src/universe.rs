@@ -1,3 +1,5 @@
+use std::mem::swap;
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum LifeState {
     Dead,
@@ -14,7 +16,7 @@ impl LifeState {
         }
     }
 
-    pub fn randomize(&mut self, p_alive: f64) {
+    fn randomize(&mut self, p_alive: f64) {
         *self = Self::new(p_alive);
     }
 }
@@ -55,24 +57,26 @@ impl Universe {
                 self.buffer[i] = match self.cells[i] {
                     LifeState::Healthy => LifeState::Dying,
                     LifeState::Dying => LifeState::Dead,
-                    LifeState::Dead => match self.count_live_neighbors(row, col) {
+                    LifeState::Dead => match self.count_healthy_neighbors(row, col) {
                         2 => LifeState::Healthy,
                         _ => LifeState::Dead,
                     },
                 };
             }
         }
-        std::mem::swap(&mut self.cells, &mut self.buffer);
+        swap(&mut self.cells, &mut self.buffer);
     }
 
     pub fn is_alive(&self) -> bool {
         self.cells.iter().any(|c| *c != LifeState::Dead)
     }
 
-    fn count_live_neighbors(&self, row: u32, col: u32) -> usize {
+    fn count_healthy_neighbors(&self, row: u32, col: u32) -> usize {
         NEIGHBOR_OFFSETS
             .iter()
             .filter(|[i, j]| {
+                // wrapping_add_signed is just a convenient way to do u32 + i32,
+                // actual wrap-around behavior is done in get_index
                 let n_row = row.wrapping_add_signed(*i);
                 let n_col = col.wrapping_add_signed(*j);
                 let i = self.get_index(n_row, n_col);

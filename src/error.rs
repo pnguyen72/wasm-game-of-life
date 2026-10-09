@@ -2,17 +2,17 @@ use std::fmt::Debug;
 use web_sys::console;
 
 pub trait JsResult<T> {
-    /** Like `Result::ok`, but also logs the error to console. */
+    /// Like `Result::ok`, but also logs the error to console.
     fn js_ok(self) -> Option<T>;
 }
 
 pub trait JsOption<T> {
-    /** Log the message to console if self is None. */
-    fn log_none(self, message: &str) -> Self;
+    /// Log the message to console if self is None.
+    fn js_expect(self, message: &str) -> Self;
 }
 
 macro_rules! console_error {
-    ($($t:tt)*) => (console::error_1(&format_args!($($t)*).to_string().into()))
+    ($($t:tt)*) => (console::error_1(&format!($($t)*).into()))
 }
 
 impl<T, E: Debug> JsResult<T> for Result<T, E> {
@@ -28,7 +28,7 @@ impl<T, E: Debug> JsResult<T> for Result<T, E> {
 }
 
 impl<T> JsOption<T> for Option<T> {
-    fn log_none(self, message: &str) -> Self {
+    fn js_expect(self, message: &str) -> Self {
         if self.is_none() {
             console_error!("{message}");
         }

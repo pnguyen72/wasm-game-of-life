@@ -37,12 +37,17 @@ canvas {
 	button {
 		padding: 0.3rem;
 		margin-bottom: 0.7rem;
-		min-width: 4.5rem;
+		min-width: 5rem;
 		height: fit-content;
 		font: inherit;
 
 		background-color: rgb(255, 250, 243);
 		border: 1px solid rgb(70, 66, 97);
+		&:disabled {
+			background-color: transparent;
+			color: rgb(152, 147, 165);
+			border-color: rgb(152, 147, 165);
+		}
 		&:not(:disabled) {
 			cursor: pointer;
 			&:hover:not(:active) {

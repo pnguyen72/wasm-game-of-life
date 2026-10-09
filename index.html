@@ -2,7 +2,7 @@
 <html lang="en-US">
 	<head>
 		<meta charset="utf-8" />
-		<title>Modified game of life</title>
+		<title>Game of life</title>
 		<link rel="stylesheet" href="style.css" />
 	</head>
 	<body>
@@ -13,20 +13,20 @@
 			</div>
 
 			<div class="slider left">
-				<label for="p_alive">Alive %</label>
+				<label for="p_alive">Initial life density</label>
 				<input id="p_alive" type="range" min="1" max="70" />
 			</div>
 
 			<canvas id="canvas"></canvas>
 
 			<div class="slider right">
-				<label for="speed">Speed</label>
-				<input id="speed" type="range" min="-35" max="0" />
+				<label for="speed">Simulation speed</label>
+				<input id="speed" type="range" min="-50" max="0" />
 			</div>
 		</main>
 
 		<script type="module">
-			import init from "./pkg/lab4.js";
+			import init from "./pkg/game_of_life.js";
 
 			init();
 		</script>

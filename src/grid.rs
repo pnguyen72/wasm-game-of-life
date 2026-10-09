@@ -50,7 +50,8 @@ impl Grid {
             buffer,
         };
         grid.draw_grid_lines();
-        grid.update(universe).js_ok().and(Some(grid))
+        grid.update(universe).js_ok()?;
+        Some(grid)
     }
 
     pub fn update(&mut self, universe: &Universe) -> Result<(), JsValue> {
@@ -86,9 +87,9 @@ impl Grid {
     }
 
     fn fill_rect(&mut self, color: [u8; 4], [x, y]: [u32; 2], [w, h]: [u32; 2]) {
-        for py in y..(y + h) {
-            for px in x..(x + w) {
-                let idx = ((py * self.width + px) * 4) as usize;
+        for y in y..y + h {
+            for x in x..x + w {
+                let idx = ((y * self.width + x) * 4) as usize;
                 self.buffer[idx..idx + 4].copy_from_slice(&color);
             }
         }

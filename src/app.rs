@@ -42,12 +42,12 @@ pub fn main() -> Option<()> {
         cell_color,
     )?;
 
+    universe.borrow_mut().tick();
     let ticker = Ticker::new(
         {
             let universe = universe.clone();
             let play_pause_btn = play_pause_btn.clone();
 
-            universe.borrow_mut().tick();
             move || {
                 let mut universe = universe.borrow_mut();
                 let success = (grid.update(&universe).js_ok())
@@ -130,10 +130,9 @@ impl Input {
         self.value_as_number() / 100.
     }
 
+    #[allow(clippy::cast_possible_truncation)] // we control the HTML value, it won't overflow
     fn get_delay(&self) -> i32 {
         // html value is as speed; speed = -delay
-        #[allow(clippy::cast_possible_truncation)] // we control the HTML value, it won't overflow
-        let delay = -self.value_as_number() as i32;
-        delay
+        -self.value_as_number() as i32
     }
 }
