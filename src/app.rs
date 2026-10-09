@@ -14,10 +14,10 @@ const LINE_THICKNESS: u32 = 1;
 
 const fn cell_color(cell: Option<LifeState>) -> [u8; 4] {
     match cell {
-        None => [64, 61, 82, 255],
-        Some(LifeState::Healthy) => [224, 222, 224, 255],
+        None => [242, 233, 225, 255],
+        Some(LifeState::Healthy) => [70, 66, 97, 255],
         Some(LifeState::Dying) => [235, 111, 146, 255],
-        Some(LifeState::Dead) => [25, 23, 36, 255],
+        Some(LifeState::Dead) => [0, 0, 0, 0],
     }
 }
 

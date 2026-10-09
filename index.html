@@ -3,24 +3,27 @@
 	<head>
 		<meta charset="utf-8" />
 		<title>Modified game of life</title>
-		<style>
-			body {
-				background-color: rgb(31, 29, 46);
-				button:not(:disabled) {
-					cursor: pointer;
-				}
-				input:not(:disabled) {
-					cursor: grab;
-				}
-			}
-		</style>
+		<link rel="stylesheet" href="style.css" />
 	</head>
 	<body>
-		<input id="p_alive" type="range" min="1" max="70" />
-		<button id="play/pause" type="button">Play</button>
-		<button id="step/restart" type="button">Step</button>
-		<canvas id="canvas"></canvas>
-		<input id="speed" type="range" min="-40" max="0" />
+		<main class="app">
+			<div class="controls">
+				<button id="play/pause" type="button">Play</button>
+				<button id="step/restart" type="button">Step</button>
+			</div>
+
+			<div class="slider left">
+				<label for="p_alive">Alive %</label>
+				<input id="p_alive" type="range" min="1" max="70" />
+			</div>
+
+			<canvas id="canvas"></canvas>
+
+			<div class="slider right">
+				<label for="speed">Speed</label>
+				<input id="speed" type="range" min="-35" max="0" />
+			</div>
+		</main>
 
 		<script type="module">
 			import init from "./pkg/lab4.js";
