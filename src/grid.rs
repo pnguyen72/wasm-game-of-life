@@ -1,11 +1,10 @@
-use wasm_bindgen::{Clamped, prelude::*};
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
-
 use crate::{
     element::Element,
     error::JsResult,
     universe::{LifeState, Universe},
 };
+use wasm_bindgen::{Clamped, prelude::*};
+use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
 type ColorFn = fn(Option<LifeState>) -> [u8; 4]; // none = grid lines
 
@@ -22,8 +21,8 @@ pub struct Grid {
 type Canvas = Element<HtmlCanvasElement>;
 
 impl Grid {
-    pub fn new(
-        element_id: &str,
+    pub fn init(
+        canvas_element_id: &str,
         universe: &Universe,
         cell_size: u32,
         line_thickness: u32,
@@ -32,7 +31,7 @@ impl Grid {
         let width = cell_size * universe.width + line_thickness * (universe.width + 1);
         let height = cell_size * universe.height + line_thickness * (universe.height + 1);
 
-        let canvas = Canvas::get_by_id(element_id)?;
+        let canvas = Canvas::get_by_id(canvas_element_id)?;
         canvas.set_width(width);
         canvas.set_height(height);
         let ctx: CanvasRenderingContext2d =

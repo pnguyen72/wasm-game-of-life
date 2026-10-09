@@ -1,4 +1,4 @@
-use crate::error::JsResult;
+use crate::error::{JsOption, JsResult};
 use std::fmt::Debug;
 use std::ops::Deref;
 use wasm_bindgen::prelude::*;
@@ -18,7 +18,10 @@ impl<T: JsCast> Deref for Element<T> {
 
 impl<T: JsCast + AsRef<EventTarget> + Debug> Element<T> {
     pub fn get_by_id(id: &str) -> Option<Self> {
-        let element = window()?.document()?.get_element_by_id(id)?;
+        let element = window()?
+            .document()?
+            .get_element_by_id(id)
+            .log_none(&format!("Element with id {id} not found"))?;
         Self::from(element)
     }
 
@@ -28,8 +31,8 @@ impl<T: JsCast + AsRef<EventTarget> + Debug> Element<T> {
                 callback(&target);
             }
         });
-        let el: &EventTarget = self.0.as_ref();
-        if el
+        let target: &EventTarget = self.0.as_ref();
+        if target
             .add_event_listener_with_callback(event, handler.as_ref().unchecked_ref())
             .js_ok()
             .is_some()

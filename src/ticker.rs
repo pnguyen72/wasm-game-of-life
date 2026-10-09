@@ -14,18 +14,19 @@ pub struct Ticker {
 }
 
 impl Ticker {
-    pub fn new(f: impl FnMut() -> bool + 'static, delay: i32) -> Rc<Self> {
+    pub fn new(tick: impl FnMut() -> bool + 'static, delay: i32) -> Rc<Self> {
         Rc::new_cyclic(|weak: &Weak<Self>| Self {
-            tick: RefCell::new(Box::new(f)),
+            tick: RefCell::new(Box::new(tick)),
             delay: Cell::new(delay),
             timer_id: Rc::new(Cell::new(None)),
             timer: Closure::new({
                 let weak = weak.clone();
                 move || {
-                    if let Some(ticker) = weak.upgrade()
-                        && !ticker.step()
-                    {
-                        ticker.stop();
+                    if let Some(ticker) = weak.upgrade() {
+                        let success = ticker.step();
+                        if !success {
+                            ticker.stop();
+                        }
                     }
                 }
             }),

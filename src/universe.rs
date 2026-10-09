@@ -2,13 +2,13 @@
 pub enum LifeState {
     Dead,
     Dying,
-    Alive,
+    Healthy,
 }
 
 impl LifeState {
     fn new(p_alive: f64) -> Self {
         if rand::random_bool(p_alive) {
-            Self::Alive
+            Self::Healthy
         } else {
             Self::Dead
         }
@@ -42,7 +42,6 @@ impl Universe {
 
     pub fn randomize(&mut self, p_alive: f64) {
         self.cells.iter_mut().for_each(|c| c.randomize(p_alive));
-        self.buffer = self.cells.clone();
     }
 
     pub fn get_cell(&self, row: u32, col: u32) -> LifeState {
@@ -54,10 +53,10 @@ impl Universe {
             for col in 0..self.width {
                 let i = self.get_index(row, col);
                 self.buffer[i] = match self.cells[i] {
-                    LifeState::Alive => LifeState::Dying,
+                    LifeState::Healthy => LifeState::Dying,
                     LifeState::Dying => LifeState::Dead,
                     LifeState::Dead => match self.count_live_neighbors(row, col) {
-                        2 => LifeState::Alive,
+                        2 => LifeState::Healthy,
                         _ => LifeState::Dead,
                     },
                 };
@@ -77,7 +76,7 @@ impl Universe {
                 let n_row = row.wrapping_add_signed(*i);
                 let n_col = col.wrapping_add_signed(*j);
                 let i = self.get_index(n_row, n_col);
-                self.cells[i] == LifeState::Alive
+                self.cells[i] == LifeState::Healthy
             })
             .count()
     }
