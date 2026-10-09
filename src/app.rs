@@ -9,7 +9,6 @@ use std::{cell::RefCell, rc::Rc};
 use web_sys::{HtmlButtonElement, HtmlInputElement};
 
 const UNIVERSE_SIZE: [u32; 2] = [64, 64];
-const CELL_SIZE: u32 = 10;
 const LINE_THICKNESS: u32 = 1;
 
 const fn cell_color(cell: Option<LifeState>) -> [u8; 4] {
@@ -33,15 +32,9 @@ pub fn main() -> Option<()> {
         UNIVERSE_SIZE,
         p_alive_slider.get_p_alive(),
     )));
+    let mut grid = Grid::init("canvas", &universe.borrow(), LINE_THICKNESS, cell_color)?;
 
-    let mut grid = Grid::init(
-        "canvas",
-        &universe.borrow(),
-        CELL_SIZE,
-        LINE_THICKNESS,
-        cell_color,
-    )?;
-
+    // Core logic
     universe.borrow_mut().tick();
     let ticker = Ticker::new(
         {

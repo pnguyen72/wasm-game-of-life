@@ -20,13 +20,14 @@ body {
 }
 
 main {
-	display: grid;
-	grid-template-columns: auto auto auto;
-	grid-template-areas:
-		"controls controls controls"
-		"left        canvas   right";
+	display: flex;
+	flex-direction: column;
+	padding-top: 1.5rem;
+	padding-bottom: 1rem;
+	row-gap: 1rem;
 	align-items: center;
-	justify-items: center;
+	width: 100%;
+	height: 100%;
 
 	body:not([data-wasm-loaded]) & {
 		display: none;
@@ -46,115 +47,104 @@ main {
 	}
 }
 
-canvas {
-	grid-area: canvas;
-	border: 1px solid rgb(70, 66, 97);
-	background-color: rgb(255, 250, 243);
+.canvas-container {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 100%;
+	height: 100%;
+
+	canvas {
+		background-color: rgb(255, 250, 243);
+		border: 1px solid rgb(70, 66, 97);
+	}
 }
 
 .controls {
-	grid-area: controls;
 	display: flex;
-	gap: 0.8rem;
+	justify-content: center;
+	gap: 3rem;
 
-	button {
-		padding: 0.3rem;
-		margin-bottom: 0.7rem;
-		min-width: 5rem;
-		height: fit-content;
-		font: inherit;
-
-		background-color: rgb(255, 250, 243);
-		border: 1px solid rgb(70, 66, 97);
-		&:disabled {
-			background-color: transparent;
-			color: rgb(152, 147, 165);
-			border-color: rgb(152, 147, 165);
-		}
-		&:not(:disabled) {
-			cursor: pointer;
-			&:hover:not(:active) {
-				background-color: transparent;
-			}
-		}
-	}
-}
-
-.slider {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-
-	&.left {
-		grid-area: left;
-		margin-right: 1.5rem;
-	}
-
-	&.right {
-		grid-area: right;
-		margin-left: 1.5rem;
-	}
-
-	label {
-		font-size: 0.85rem;
-		font-weight: 600;
-		letter-spacing: 0.05em;
-		text-transform: uppercase;
-		white-space: nowrap;
-		margin-bottom: 0.5rem;
-	}
-
-	input[type="range"] {
-		width: 12rem;
-		appearance: none;
-		background: transparent;
-
-		&:not(:disabled) {
-			cursor: grab;
-			&:active {
-				cursor: grabbing;
-			}
-		}
-
-		&::-webkit-slider-runnable-track {
-			height: 0.5rem;
-			background-color: rgb(206, 202, 205);
-			border: 1px solid rgb(70, 66, 97);
-		}
-		&::-moz-range-track {
-			height: 0.5rem;
-			background-color: rgb(206, 202, 205);
-			border: 1px solid rgb(70, 66, 97);
-		}
-
-		&::-webkit-slider-thumb {
-			appearance: none;
-			width: 0.6rem;
-			height: 1.3rem;
-			margin-top: -0.4rem; /* centering */
-			border-radius: 0;
-			border: 1px solid black;
-			background-color: rgb(235, 111, 146);
-		}
-		&::-moz-range-thumb {
-			width: 0.6rem;
-			height: 1.3rem;
-			border-radius: 0;
-			border: 1px solid black;
-			background-color: rgb(235, 111, 146);
-		}
-	}
-}
-
-@media (max-width: 1200px) {
-	main {
-		grid-template-areas:
-			"left     controls right"
-			"canvas   canvas   canvas";
-		row-gap: 1rem;
+	.buttons {
+		display: flex;
 		align-items: end;
+		gap: 1rem;
+
+		button {
+			padding: 0.3rem;
+			min-width: 5rem;
+			height: fit-content;
+			font: inherit;
+
+			background-color: rgb(255, 250, 243);
+			border: 1px solid rgb(70, 66, 97);
+			&:disabled {
+				background-color: transparent;
+				color: rgb(152, 147, 165);
+				border-color: rgb(152, 147, 165);
+			}
+			&:not(:disabled) {
+				cursor: pointer;
+				&:hover:not(:active) {
+					background-color: transparent;
+				}
+			}
+		}
 	}
-	.controls button {
-		margin-bottom: 0;
+
+	.slider {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		align-items: center;
+
+		label {
+			font-size: 0.85rem;
+			font-weight: 600;
+			letter-spacing: 0.05em;
+			text-transform: uppercase;
+			white-space: nowrap;
+		}
+
+		input[type="range"] {
+			width: 13rem;
+			appearance: none;
+			background: transparent;
+
+			&:not(:disabled) {
+				cursor: grab;
+				&:active {
+					cursor: grabbing;
+				}
+			}
+
+			&::-webkit-slider-runnable-track {
+				height: 0.5rem;
+				background-color: rgb(206, 202, 205);
+				border: 1px solid rgb(70, 66, 97);
+			}
+			&::-moz-range-track {
+				height: 0.5rem;
+				background-color: rgb(206, 202, 205);
+				border: 1px solid rgb(70, 66, 97);
+			}
+
+			&::-webkit-slider-thumb {
+				appearance: none;
+				width: 0.6rem;
+				height: 1.3rem;
+				margin-top: -0.4rem; /* centering */
+				border-radius: 0;
+				border: 1px solid black;
+				background-color: rgb(235, 111, 146);
+			}
+			&::-moz-range-thumb {
+				width: 0.6rem;
+				height: 1.3rem;
+				border-radius: 0;
+				border: 1px solid black;
+				background-color: rgb(235, 111, 146);
+			}
+		}
 	}
 }

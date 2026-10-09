@@ -1,4 +1,4 @@
-use crate::error::{JsOption, JsResult};
+use crate::error::JsResult;
 use std::{
     cell::{Cell, RefCell},
     rc::{Rc, Weak},
@@ -36,7 +36,7 @@ impl Ticker {
     pub fn start(&self) {
         if !self.is_running() {
             let delay = self.delay.get();
-            let timer_id = set_interval(&self.timer, delay).js_expect("Failed to set interval");
+            let timer_id = set_interval(&self.timer, delay);
             self.timer_id.set(timer_id);
         }
     }
@@ -46,9 +46,7 @@ impl Ticker {
     }
 
     pub fn stop(&self) {
-        if let Some(id) = self.timer_id.take() {
-            clear_interval(id).js_expect("Failed to clear interval");
-        }
+        self.timer_id.take().and_then(clear_interval);
     }
 
     pub const fn is_running(&self) -> bool {

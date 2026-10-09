@@ -8,20 +8,21 @@
 	<body>
 		<main>
 			<div class="controls">
-				<button id="play/pause" type="button">Play</button>
-				<button id="step/restart" type="button">Step</button>
+				<div class="slider left">
+					<label for="p_alive">Initial life density</label>
+					<input id="p_alive" type="range" min="1" max="70" />
+				</div>
+				<div class="buttons">
+					<button id="play/pause" type="button">Play</button>
+					<button id="step/restart" type="button">Step</button>
+				</div>
+				<div class="slider right">
+					<label for="speed">Simulation speed</label>
+					<input id="speed" type="range" min="-40" max="0" />
+				</div>
 			</div>
-
-			<div class="slider left">
-				<label for="p_alive">Initial life density</label>
-				<input id="p_alive" type="range" min="1" max="70" />
-			</div>
-
-			<canvas id="canvas"></canvas>
-
-			<div class="slider right">
-				<label for="speed">Simulation speed</label>
-				<input id="speed" type="range" min="-50" max="0" />
+			<div class="canvas-container">
+				<canvas id="canvas"></canvas>
 			</div>
 		</main>
 		<div id="loading-spinner" role="status" aria-label="Loading"></div>

@@ -1,6 +1,6 @@
 use crate::{
     element::Element,
-    error::JsResult,
+    error::{JsOption, JsResult},
     universe::{LifeState, Universe},
 };
 use wasm_bindgen::{Clamped, prelude::*};
@@ -24,19 +24,19 @@ impl Grid {
     pub fn init(
         canvas_element_id: &str,
         universe: &Universe,
-        cell_size: u32,
         line_thickness: u32,
         color: ColorFn,
     ) -> Option<Self> {
+        let canvas = Canvas::get_by_id(canvas_element_id)?;
+
+        let cell_size = best_cell_size(&canvas, universe, line_thickness)?;
         let width = cell_size * universe.width + line_thickness * (universe.width + 1);
         let height = cell_size * universe.height + line_thickness * (universe.height + 1);
-
-        let canvas = Canvas::get_by_id(canvas_element_id)?;
         canvas.set_width(width);
         canvas.set_height(height);
+
         let ctx: CanvasRenderingContext2d =
             canvas.get_context("2d").js_ok()??.dyn_into().js_ok()?;
-
         let buffer_size = (width * height * 4) as usize;
         let buffer = vec![0; buffer_size];
 
@@ -99,4 +99,25 @@ impl Grid {
         ImageData::new_with_u8_clamped_array(Clamped(&self.buffer), self.width)
             .and_then(|data| self.ctx.put_image_data(&data, 0., 0.))
     }
+}
+
+/// Find the largest cell size so that the canvas still fits the screen
+fn best_cell_size(canvas: &Canvas, universe: &Universe, line_thickness: u32) -> Option<u32> {
+    let container = canvas
+        .parent_element()
+        .js_expect("canvas container should exist")?;
+
+    let w_container = i64::from(container.client_width());
+    let h_container = i64::from(container.client_height());
+
+    let w_universe = i64::from(universe.width);
+    let h_universe = i64::from(universe.height);
+    let line_thickness = i64::from(line_thickness);
+
+    let width = (w_container - line_thickness * (w_universe + 1)) / w_universe;
+    let height = (h_container - line_thickness * (h_universe + 1)) / h_universe;
+
+    #[allow(clippy::cast_sign_loss)]
+    #[allow(clippy::cast_possible_truncation)]
+    Some(width.min(height).max(1) as u32)
 }

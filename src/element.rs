@@ -18,11 +18,11 @@ impl<T: JsCast> Deref for Element<T> {
 
 impl<T: JsCast + AsRef<EventTarget>> Element<T> {
     pub fn get_by_id(id: &str) -> Option<Self> {
-        let element = window()?
+        window()?
             .document()?
             .get_element_by_id(id)
-            .js_expect(&format!("Element with id {id} not found"))?;
-        Self::try_from(element)
+            .js_expect(&format!("Element with id {id} should exist"))
+            .and_then(Self::try_from)
     }
 
     pub fn on(&self, event: &str, mut callback: impl FnMut(&Self) + 'static) {
