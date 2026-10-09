@@ -1,33 +1,31 @@
 use crate::error::JsResult;
-use std::rc::Weak;
 use std::{
     cell::{Cell, RefCell},
-    rc::Rc,
+    rc::{Rc, Weak},
 };
 use wasm_bindgen::prelude::*;
 use web_sys::window;
 
 pub struct Ticker {
     tick: RefCell<Box<dyn FnMut() -> bool>>,
-    delay: Cell<i32>,
-    running: Cell<bool>,
     timer: Closure<dyn FnMut()>,
+    delay: Cell<i32>,
+    timer_id: Rc<Cell<Option<i32>>>,
 }
 
 impl Ticker {
-    pub fn new(tick: impl FnMut() -> bool + 'static, delay: i32) -> Rc<Self> {
+    pub fn new(f: impl FnMut() -> bool + 'static, delay: i32) -> Rc<Self> {
         Rc::new_cyclic(|weak: &Weak<Self>| Self {
-            tick: RefCell::new(Box::new(tick)),
+            tick: RefCell::new(Box::new(f)),
             delay: Cell::new(delay),
-            running: Cell::new(false),
+            timer_id: Rc::new(Cell::new(None)),
             timer: Closure::new({
                 let weak = weak.clone();
                 move || {
-                    if let Some(ticker) = weak.upgrade().filter(|t| t.is_running()) {
-                        let mut tick = ticker.tick.borrow_mut();
-                        if tick() {
-                            set_timeout(&ticker.timer, ticker.delay.get());
-                        }
+                    if let Some(ticker) = weak.upgrade()
+                        && !ticker.step()
+                    {
+                        ticker.stop();
                     }
                 }
             }),
@@ -35,34 +33,42 @@ impl Ticker {
     }
 
     pub fn start(&self) {
-        if !self.running.get() {
-            self.running.set(true);
-            set_timeout(&self.timer, self.delay.get());
+        if !self.is_running() {
+            let timer_id = set_interval(&self.timer, self.delay.get());
+            self.timer_id.set(timer_id);
         }
     }
 
-    pub fn step(&self) {
-        if !self.running.get() {
-            let mut tick = self.tick.borrow_mut();
-            tick();
-        }
+    pub fn step(&self) -> bool {
+        self.tick.borrow_mut()()
     }
 
     pub fn stop(&self) {
-        self.running.set(false);
+        self.timer_id.take().and_then(clear_interval);
+    }
+
+    pub fn is_running(&self) -> bool {
+        self.timer_id.get().is_some()
     }
 
     pub fn set_delay(&self, delay: i32) {
         self.delay.set(delay);
-    }
-
-    pub const fn is_running(&self) -> bool {
-        self.running.get()
+        if self.is_running() {
+            self.stop();
+            self.start();
+        }
     }
 }
 
-fn set_timeout(cb: &Closure<dyn FnMut()>, timeout: i32) -> Option<i32> {
+fn set_interval(cb: &Closure<dyn FnMut()>, timeout: i32) -> Option<i32> {
     window()?
-        .set_timeout_with_callback_and_timeout_and_arguments_0(cb.as_ref().unchecked_ref(), timeout)
+        .set_interval_with_callback_and_timeout_and_arguments_0(
+            cb.as_ref().unchecked_ref(),
+            timeout,
+        )
         .js_ok()
+}
+
+fn clear_interval(handle: i32) -> Option<()> {
+    window().map(|w| w.clear_interval_with_handle(handle))
 }

@@ -79,13 +79,14 @@ pub fn main() {
         let p_alive_slider = p_alive_slider.clone();
 
         move |_| {
-            if ticker.is_running() {
-                ticker.stop();
+            if ticker.is_running() || !universe.borrow().is_alive() {
                 universe
                     .borrow_mut()
                     .randomize(p_alive_slider.get_p_alive());
-                ticker.start();
-                play_pause_btn.set_disabled(false);
+                if !ticker.is_running() {
+                    ticker.start();
+                    play_pause_btn.set_disabled(false);
+                }
             } else {
                 ticker.step();
             }

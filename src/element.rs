@@ -1,10 +1,9 @@
+use crate::error::JsResult;
 use std::fmt::Debug;
 use std::ops::Deref;
 use wasm_bindgen::prelude::*;
 use web_sys::window;
 use web_sys::{Event, EventTarget};
-
-use crate::error::JsResult;
 
 #[derive(Clone)]
 pub struct Element<T: JsCast>(T);
