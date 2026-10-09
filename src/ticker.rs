@@ -24,9 +24,7 @@ impl Ticker {
                 move || {
                     if let Some(ticker) = weak.upgrade().filter(|t| t.is_running()) {
                         let mut tick = ticker.tick.borrow_mut();
-                        if !tick() {
-                            ticker.stop();
-                        } else if ticker.running.get() {
+                        if tick() {
                             set_timeout(&ticker.timer, ticker.delay.get());
                         }
                     }

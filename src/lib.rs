@@ -45,16 +45,14 @@ pub fn main() {
         cell_color,
     )
     .unwrap();
-    let play_btn = Button::get_by_id("play-pause").unwrap();
-    let step_btn = Button::get_by_id("step").unwrap();
+    let play_pause_btn = Button::get_by_id("play/pause").unwrap();
+    let step_restart_btn = Button::get_by_id("step/restart").unwrap();
     let speed_slider = Input::get_by_id("speed").unwrap();
 
     let ticker = Rc::new(Ticker::new(
         {
             let universe = universe.clone();
-            let play_btn = play_btn.clone();
-            let step_btn = step_btn.clone();
-            let speed_slider = speed_slider.clone();
+            let play_pause_btn = play_pause_btn.clone();
 
             universe.borrow_mut().tick();
             move || {
@@ -68,9 +66,7 @@ pub fn main() {
                     true
                 };
                 if !to_continue {
-                    play_btn.set_disabled(true);
-                    step_btn.set_disabled(true);
-                    speed_slider.set_disabled(true);
+                    play_pause_btn.set_disabled(true);
                 }
                 to_continue
             }
@@ -78,26 +74,38 @@ pub fn main() {
         speed_slider.get_delay(),
     ));
 
-    step_btn.on("click", {
+    step_restart_btn.on("click", {
+        let universe = universe.clone();
         let ticker = ticker.clone();
-        move |_| ticker.step()
+        let play_pause_btn = play_pause_btn.clone();
+        let p_alive_slider = p_alive_slider.clone();
+
+        move |_| {
+            if ticker.is_running() {
+                ticker.stop();
+                universe
+                    .borrow_mut()
+                    .randomize(p_alive_slider.get_p_alive());
+                ticker.start();
+                play_pause_btn.set_disabled(false);
+            } else {
+                ticker.step();
+            }
+        }
     });
 
-    play_btn.on("click", {
+    play_pause_btn.on("click", {
         let ticker = ticker.clone();
-        let step_btn = step_btn.clone();
-        let speed_slider = speed_slider.clone();
+        let step_restart_btn = step_restart_btn.clone();
 
         move |this| {
-            let was_running = ticker.is_running();
-            step_btn.set_disabled(!was_running);
-            speed_slider.set_disabled(was_running);
-
-            if was_running {
+            if ticker.is_running() {
                 this.set_text_content("Play".into());
+                step_restart_btn.set_text_content("Step".into());
                 ticker.stop();
             } else {
                 this.set_text_content("Pause".into());
+                step_restart_btn.set_text_content("Restart".into());
                 ticker.start();
             }
         }
@@ -105,10 +113,7 @@ pub fn main() {
 
     speed_slider.on("input", {
         let ticker = ticker.clone();
-        move |this| {
-            #[allow(clippy::cast_possible_truncation)]
-            ticker.set_delay(this.get_delay());
-        }
+        move |this| ticker.set_delay(this.get_delay())
     });
 
     p_alive_slider.on("input", move |this| {
@@ -116,10 +121,9 @@ pub fn main() {
         universe.borrow_mut().randomize(this.get_p_alive());
         ticker.step();
 
-        play_btn.set_text_content("Play".into());
-        play_btn.set_disabled(false);
-        step_btn.set_disabled(false);
-        speed_slider.set_disabled(true);
+        play_pause_btn.set_text_content("Play".into());
+        step_restart_btn.set_text_content("Step".into());
+        play_pause_btn.set_disabled(false);
     });
 }
 
@@ -133,7 +137,7 @@ impl Input {
     }
 
     fn get_delay(&self) -> i32 {
-        // html value is in terms of speed; speed = -delay
+        // html value is as speed; speed = -delay
         #[allow(clippy::cast_possible_truncation)] // we control the HTML value, it won't overflow
         let delay = -self.value_as_number() as i32;
         delay
