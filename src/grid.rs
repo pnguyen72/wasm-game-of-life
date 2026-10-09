@@ -3,6 +3,7 @@ use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
 use crate::{
     element::Element,
+    error::JsResult,
     universe::{LifeState, Universe},
 };
 
@@ -34,7 +35,8 @@ impl Grid {
         let canvas = Canvas::get_by_id(element_id)?;
         canvas.set_width(width);
         canvas.set_height(height);
-        let ctx: CanvasRenderingContext2d = canvas.get_context("2d").ok()??.dyn_into().ok()?;
+        let ctx: CanvasRenderingContext2d =
+            canvas.get_context("2d").js_ok()??.dyn_into().js_ok()?;
 
         let buffer_size = (width * height * 4) as usize;
         let buffer = vec![0; buffer_size];
@@ -49,7 +51,7 @@ impl Grid {
             buffer,
         };
         grid.draw_grid_lines();
-        grid.update(universe).ok().and(Some(grid))
+        grid.update(universe).js_ok().and(Some(grid))
     }
 
     pub fn update(&mut self, universe: &Universe) -> Result<(), JsValue> {

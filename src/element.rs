@@ -1,8 +1,10 @@
+use std::fmt::Debug;
+use std::ops::Deref;
 use wasm_bindgen::prelude::*;
 use web_sys::window;
+use web_sys::{Event, EventTarget};
 
-use std::ops::Deref;
-use web_sys::{Event, EventTarget, console};
+use crate::error::JsResult;
 
 #[derive(Clone)]
 pub struct Element<T: JsCast>(T);
@@ -15,7 +17,7 @@ impl<T: JsCast> Deref for Element<T> {
     }
 }
 
-impl<T: JsCast + AsRef<EventTarget>> Element<T> {
+impl<T: JsCast + AsRef<EventTarget> + Debug> Element<T> {
     pub fn get_by_id(id: &str) -> Option<Self> {
         let element = window()?.document()?.get_element_by_id(id)?;
         Self::from(element)
@@ -28,14 +30,16 @@ impl<T: JsCast + AsRef<EventTarget>> Element<T> {
             }
         });
         let el: &EventTarget = self.0.as_ref();
-        if let Err(e) = el.add_event_listener_with_callback(event, handler.as_ref().unchecked_ref())
+        if el
+            .add_event_listener_with_callback(event, handler.as_ref().unchecked_ref())
+            .js_ok()
+            .is_some()
         {
-            console::error_1(&e);
+            handler.forget(); // keep the closure alive for JS
         }
-        handler.forget(); // keep the closure alive for JS
     }
 
-    fn from<E: JsCast + AsRef<EventTarget>>(e: E) -> Option<Self> {
-        e.dyn_into().ok().map(Self)
+    fn from<E: JsCast + AsRef<EventTarget> + Debug>(e: E) -> Option<Self> {
+        e.dyn_into().js_ok().map(Self)
     }
 }

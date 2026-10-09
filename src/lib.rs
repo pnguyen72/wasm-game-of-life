@@ -1,17 +1,19 @@
 mod element;
+mod error;
 mod grid;
 mod ticker;
 mod universe;
 
 use crate::{
     element::Element,
+    error::JsResult,
     grid::Grid,
     ticker::Ticker,
     universe::{LifeState, Universe},
 };
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
-use web_sys::{HtmlButtonElement, HtmlInputElement, console};
+use web_sys::{HtmlButtonElement, HtmlInputElement};
 
 const UNIVERSE_SIZE: [u32; 2] = [64, 64];
 const CELL_SIZE: u32 = 10;
@@ -56,19 +58,15 @@ pub fn main() {
 
             universe.borrow_mut().tick();
             move || {
-                let to_continue = if let Err(e) = grid.update(&universe.borrow()) {
-                    console::error_1(&e);
-                    false
-                } else if !universe.borrow().is_alive() {
-                    false
-                } else {
-                    universe.borrow_mut().tick();
-                    true
-                };
-                if !to_continue {
+                let mut universe = universe.borrow_mut();
+                let success = (grid.update(&universe).js_ok())
+                    .filter(|()| universe.is_alive())
+                    .map(|()| universe.tick())
+                    .is_some();
+                if !success {
                     play_pause_btn.set_disabled(true);
                 }
-                to_continue
+                success
             }
         },
         speed_slider.get_delay(),

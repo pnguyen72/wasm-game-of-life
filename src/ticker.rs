@@ -1,3 +1,4 @@
+use crate::error::JsResult;
 use std::rc::Weak;
 use std::{
     cell::{Cell, RefCell},
@@ -63,5 +64,5 @@ impl Ticker {
 fn set_timeout(cb: &Closure<dyn FnMut()>, timeout: i32) -> Option<i32> {
     window()?
         .set_timeout_with_callback_and_timeout_and_arguments_0(cb.as_ref().unchecked_ref(), timeout)
-        .ok()
+        .js_ok()
 }
