@@ -2,6 +2,12 @@
 	box-sizing: border-box;
 }
 
+@keyframes spin {
+	to {
+		transform: rotate(1turn);
+	}
+}
+
 body {
 	color: rgb(70, 66, 97);
 	background-color: rgb(242, 233, 225);
@@ -13,7 +19,7 @@ body {
 	justify-content: center;
 }
 
-.app {
+main {
 	display: grid;
 	grid-template-columns: auto auto auto;
 	grid-template-areas:
@@ -21,6 +27,23 @@ body {
 		"left        canvas   right";
 	align-items: center;
 	justify-items: center;
+
+	body:not([data-wasm-loaded]) & {
+		display: none;
+	}
+}
+
+#loading-spinner {
+	width: 7rem;
+	aspect-ratio: 1;
+	border: 0.4rem solid rgb(206, 202, 205);
+	border-top-color: rgb(235, 111, 146);
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+
+	body[data-wasm-loaded] & {
+		display: none;
+	}
 }
 
 canvas {
@@ -124,7 +147,7 @@ canvas {
 }
 
 @media (max-width: 1200px) {
-	.app {
+	main {
 		grid-template-areas:
 			"left     controls right"
 			"canvas   canvas   canvas";

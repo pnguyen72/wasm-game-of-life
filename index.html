@@ -6,7 +6,7 @@
 		<link rel="stylesheet" href="style.css" />
 	</head>
 	<body>
-		<main class="app">
+		<main>
 			<div class="controls">
 				<button id="play/pause" type="button">Play</button>
 				<button id="step/restart" type="button">Step</button>
@@ -24,6 +24,7 @@
 				<input id="speed" type="range" min="-50" max="0" />
 			</div>
 		</main>
+		<div id="loading-spinner" role="status" aria-label="Loading"></div>
 
 		<script type="module">
 			import init from "./pkg/game_of_life.js";
